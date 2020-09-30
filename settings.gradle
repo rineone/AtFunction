@@ -1,0 +1,3 @@
+include ':atfunction'
+include ':app'
+rootProject.name = "AtFunction"
