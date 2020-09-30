@@ -19,16 +19,13 @@ public class LDSpan extends DynamicDrawableSpan {
     private Bitmap bitmap;
     //at颜色
     private int mAtColor = 0;
+    private int mAtSize = 50;
 
-    public LDSpan(Context context , String name) {
-        this.context = context;
-        this.bitmap = getNameBitmap(name);
-    }
-
-    public LDSpan(Context context , String name, int color) {
+    public LDSpan(Context context , String name, int color,int size) {
         this.context = context;
         this.bitmap = getNameBitmap(name);
         this.mAtColor = color;
+        this.mAtSize = size;
     }
 
     @Override
@@ -43,10 +40,9 @@ public class LDSpan extends DynamicDrawableSpan {
 
 
     /**
-     * 把返回的人名，转换成bitmap
+     * 把返回的@信息，转换成bitmap
      * <p>
-     * 比如返回@李达达
-     *
+     * 比如返回@Rine
      * @param name
      * @return
      */
@@ -54,14 +50,10 @@ public class LDSpan extends DynamicDrawableSpan {
         /* 把@相关的字符串转换成bitmap 然后使用DynamicDrawableSpan加入输入框中 */
         Paint paint = new Paint();
         paint.setAntiAlias(true);
-        if (mAtColor!=0){
-            //如果没有设置颜色，则使用默认颜色
-            mAtColor = context.getResources().getColor(R.color.color_blue);
-        }
         //设置字体画笔的颜色
         paint.setColor(mAtColor);
         //设置字体的大小
-        paint.setTextSize(50);
+        paint.setTextSize(mAtSize);
         Rect rect = new Rect();
         paint.getTextBounds(name, 0, name.length(), rect);
         // 获取字符串在屏幕上的长度

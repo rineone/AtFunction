@@ -3,8 +3,8 @@ package com.rine.atfunction;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.TypedArray;
 import android.graphics.Color;
-import android.os.Bundle;
 import android.text.InputFilter;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -28,6 +28,9 @@ public class ContentEditText  extends AppCompatEditText {
     public static final int CODE_PERSON2 = 0x06;
     public static final String KEY_CID = "key_id";
     public static final String KEY_NAME = "key_name";
+    private StringBuilder builder;
+    private int mAtTextSize = 50;
+    private int mAtTextColor;
 
     public ContentEditText(Context context) {
         super(context);
@@ -36,17 +39,27 @@ public class ContentEditText  extends AppCompatEditText {
 
     public ContentEditText(Context context, AttributeSet attrs) {
         super(context, attrs);
+        init(context,attrs);
         setFilters(new InputFilter[]{new MyInputFilter()});
 
     }
 
     public ContentEditText(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        init(context,attrs);
         setFilters(new InputFilter[]{new MyInputFilter()});
     }
 
-    private StringBuilder builder;
 
+    private void init(Context context, AttributeSet attrs) {
+        mAtTextColor = context.getResources().getColor(R.color.color_blue);
+        if (attrs != null) {
+            TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.atInfo);
+            mAtTextSize = ta.getDimensionPixelSize(R.styleable.atInfo_at_textsize, 50);
+            mAtTextColor = ta.getColor(R.styleable.atInfo_at_textcolor, context.getResources().getColor(R.color.color_blue));
+            ta.recycle();
+        }
+    }
 
     /**
      * 识别输入框的是不是@符号,如果是则回调
@@ -88,7 +101,7 @@ public class ContentEditText  extends AppCompatEditText {
         int start = getSelectionEnd() - builder.toString().length() - (TextUtils.isEmpty(maskText) ? 1 : 0);
         int end = getSelectionEnd() ;
 
-        LDSpan ldSpan = new LDSpan(getContext(),"@"+showText);
+        LDSpan ldSpan = new LDSpan(getContext(),"@"+showText,mAtTextColor,mAtTextSize);
         sps.setSpan(ldSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         makeSpan(sps, new UnSpanText(start, end, textStr), userId);
         setText(sps);
@@ -103,7 +116,7 @@ public class ContentEditText  extends AppCompatEditText {
      * @param posStr 这里为@信息的位置信息，例如： "8,7|20,7",其中8为第八位，然后7为@信息的长度，|为分割，后面的20和7和前面信息类似
      * @param color @的颜色，默认为0099EE蓝色
      */
-    public static SpannableString setAtStr(String str,String posStr,int... color){
+    public static SpannableString setAtShowStr(String str,String posStr,int... color){
         //@信息
         String[] posStrs = posStr.split("\\|");
         SpannableString sps = new SpannableString(str);
@@ -132,15 +145,13 @@ public class ContentEditText  extends AppCompatEditText {
     }
 
     /**
-     * 用于显示@信息，与上面的区别主要是。
-     * 上面的那个方法用于显示用的，这个方法主要为编辑用的
+     * 用于编辑@信息
      * @param str 全部的内容
      * @param posStr 这里为@信息的位置信息，例如： "8,7|20,7|",其中8为第八位，然后7为@信息的长度，|为分割，后面的20和7和前面信息类似
      * @param ids 为@对应的id信息。以逗号,分割。例如：1,2,3,4
      * @param mContext
-     * @param color @的颜色，默认为0099EE蓝色
      */
-    public static SpannableString setAtStr(String str,String posStr,String ids,Context mContext,int... color){
+    public SpannableString setAtEditStr(String str,String posStr,String ids,Context mContext ){
         //@信息
         String[] posStrs = posStr.split("\\|");
         //id信息
@@ -148,11 +159,6 @@ public class ContentEditText  extends AppCompatEditText {
         SpannableString sps = new SpannableString(str);
         //获取@信息的数量
         int size = posStrs.length;
-        //@信息的颜色
-        int colorInt = Color.parseColor("#0099EE");
-        if (color.length>0){
-            colorInt = color[0];
-        }
         try {
             //开始循环渲染@信息的颜色，主要是将at信息弄成一个整体
             for (int i = 0;i<size;i++){
@@ -162,26 +168,25 @@ public class ContentEditText  extends AppCompatEditText {
                     int end = start + len;
                     String userId = idStrs[i];
                     String showText = str.substring(start,end);
-                    LDSpan ldSpan = new LDSpan(mContext, showText,colorInt);
+                    LDSpan ldSpan = new LDSpan(mContext, showText,mAtTextColor,mAtTextSize);
                     sps.setSpan(ldSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     makeSpan(sps, new UnSpanText(start, end, showText), userId);
                 }
             }
         }catch (Exception e){
         }
-
         return sps;
     }
 
     //获取@坐标列表
     public String  getUserString() {
+        //先对位置进行排序
         MyTextSpan[] spans = sortStrings();
         String strPos="";
         int postion = 0;
         int i = 0;
         for (MyTextSpan myTextSpan : spans) {
             String str = getText().toString();
-//            int pos1 = str.indexOf(myTextSpan.showText,postion);
             if (i>=1){
                 //如果这次值等于前面的值，则退出这次循环
                 int pos1 = StringAtUtil.getInt(myTextSpan.start,0) +myTextSpan.showText.length();
@@ -190,9 +195,7 @@ public class ContentEditText  extends AppCompatEditText {
             }
             int pos = str.indexOf(myTextSpan.showText,postion);
             int len = myTextSpan.showText.length() ;
-            int end = pos+len;
             if (pos!=-1){
-                String str1 = str.substring(pos,end);
                 postion = pos+len;
                 if (i==spans.length){
                     strPos = strPos +pos+","+ len;
@@ -229,6 +232,7 @@ public class ContentEditText  extends AppCompatEditText {
         return spans;
     }
 
+
     //获取用户Id列表
     public String getUserIdString() {
         String ids = "";
@@ -246,9 +250,8 @@ public class ContentEditText  extends AppCompatEditText {
     }
 
     //生成一个需要整体删除的Span
-    public static void makeSpan(Spannable sps, UnSpanText unSpanText, String userId) {
+    public void makeSpan(Spannable sps, UnSpanText unSpanText, String userId) {
         MyTextSpan what = new MyTextSpan(unSpanText.returnText, userId,unSpanText.start+"",unSpanText.end+"");
-
         int start = unSpanText.start;
         int end = unSpanText.end;
         sps.setSpan(what, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -258,7 +261,7 @@ public class ContentEditText  extends AppCompatEditText {
     @Override
     protected void onTextChanged(CharSequence text, int start, int lengthBefore, int lengthAfter) {
         super.onTextChanged(text, start, lengthBefore, lengthAfter);
-        //向前删除一个字符，@后的内容必须大于一个字符，可以在后面加一个空格
+        //删除数据
         if (lengthBefore == 1 && lengthAfter == 0) {
             MyTextSpan[] spans = getText().getSpans(0, getText().length(), MyTextSpan.class);
             for (MyTextSpan myImageSpan : spans) {
@@ -272,7 +275,7 @@ public class ContentEditText  extends AppCompatEditText {
     }
 
 
-    private static class MyTextSpan extends MetricAffectingSpan {
+    private class MyTextSpan extends MetricAffectingSpan {
 
         private String showText;
         private String userId;
@@ -312,7 +315,7 @@ public class ContentEditText  extends AppCompatEditText {
         }
     }
 
-    private static class UnSpanText {
+    private  class UnSpanText {
         int start;
         int end;
         String returnText;
@@ -325,17 +328,16 @@ public class ContentEditText  extends AppCompatEditText {
     }
 
 
+    //返回信息
     public void handleResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == CODE_PERSON && resultCode == Activity.RESULT_OK) {
             String keyId = data.getStringExtra(KEY_CID);
             String keyId2 = data.getExtras().getString(KEY_CID);
-            Bundle bundle = data.getExtras();
             String nameStr = data.getStringExtra(KEY_NAME);
             addAtSpan(null, nameStr, keyId);
         } else if (requestCode == CODE_PERSON2 && resultCode == Activity.RESULT_OK) {
             String keyId = data.getStringExtra(KEY_CID);
             String keyId2 = data.getExtras().getString(KEY_CID);
-            Bundle bundle = data.getExtras();
             String nameStr = data.getStringExtra(KEY_NAME);
             addAtSpan("@", nameStr, keyId);
         }
@@ -348,6 +350,7 @@ public class ContentEditText  extends AppCompatEditText {
     public interface OnJumpListener {
         void goToChooseContact(int requestCode);
     }
+
     //对外方法
     public void setOnJumpListener(OnJumpListener onJumpListener) {
         this.onJumpListener = onJumpListener;

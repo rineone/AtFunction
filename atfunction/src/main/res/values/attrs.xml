@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="atInfo">
+        <attr name="at_textsize" format="dimension"/>
+        <attr name="at_textcolor" format="color"/>
+    </declare-styleable>
+</resources>
